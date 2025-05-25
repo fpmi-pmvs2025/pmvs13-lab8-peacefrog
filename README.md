@@ -1,22 +1,15 @@
 # Guess the Car Brand Game
 
-A fun Android game where players guess car brands from their logos.
+## Description
+Guess the Car Brand is an engaging Android game that tests players' knowledge of car brands through their logos. The game presents players with car logos and challenges them to identify the correct brand from multiple choices. Built with modern Android development practices, it features a clean architecture, local score tracking, and an intuitive user interface. The application uses Room database for data persistence and Jetpack Compose for a modern, responsive UI.
 
-## Project Structure
+## Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/guess-the-car.git
+   ```
 
-```
-guess_the_car/
-├── app/                    # Android app code
-├── data/                   # Dataset and generated files
-│   ├── Car_Logo_Dataset/   # Car logo images
-│   └── cars.json          # Generated JSON file
-├── generate_cars_json.py   # Script to generate JSON
-└── README.md              # This file
-```
-
-## Setup Instructions
-
-1. **Dataset Preparation**:
+2. Dataset Preparation:
    - Download the car logo dataset from Kaggle
    - Create a `data` directory in the project root
    - Extract the dataset to `data/Car_Logo_Dataset`
@@ -24,32 +17,38 @@ guess_the_car/
      ```bash
      python generate_cars_json.py
      ```
-   - The script will create `data/cars.json`
 
-2. **Update the App**:
-   - Open `app/src/main/java/com/example/guess_the_car/data/repository/CarRepository.kt`
-   - Replace the URL in the `refreshCars()` method with your actual GitHub raw JSON file URL:
-     ```kotlin
-     val cars = apiService.getCars("https://raw.githubusercontent.com/YOUR_USERNAME/guess_the_car/main/data/cars.json")
-     ```
+3. Open the project in Android Studio
+4. Sync the project with Gradle files
+5. Build and run the application
 
-3. **Run the App**:
-   - The app will automatically:
-     - Load the car data from the JSON file
-     - Store it in the local database
-     - Start the game with the first question
+## Usage
+1. Launch the application
+2. The game will automatically load car data and start with the first question
+3. For each round:
+   - A car logo will be displayed
+   - Four possible brand names will be shown
+   - Select the correct brand to earn a point
+   - The game continues until you make a mistake or a brand is repeated
+4. When the game ends:
+   - Enter your name to save your score
+   - View your high score
+   - Start a new game
 
-## Game Rules
+## Contributing
+### Team Members
+- TToH4uk - Project Lead, Architecture Design, Backend Development
+- mbugzy - UI/UX Development, Testing and Quality Assurance
 
-- The game shows a car logo and 4 possible brand names
-- Select the correct brand to earn a point
-- The game continues until you make a mistake or a brand is repeated
-- Enter your name when the game ends to save your score
-- Try to beat your high score!
+### Implemented Tasks
+- TToH4uk:
+  - Architecture Design and Implementation
+  - Database Implementation with Room
+  - Game Logic and State Management
+  - Project Management and Documentation
 
-## Development
-
-- Built with Jetpack Compose
-- Uses Room for local database
-- Implements MVVM architecture
-- Uses Hilt for dependency injection 
+- mbugzy:
+  - UI/UX Development with Jetpack Compose
+  - Testing and Quality Assurance
+  - User Interface Design
+  - Performance Optimization
