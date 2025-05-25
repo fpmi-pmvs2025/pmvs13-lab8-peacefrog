@@ -20,6 +20,7 @@ class GameViewModel(
     private var options: List<String> = emptyList()
     private var currentScore = 0
     private var playerName = ""
+    private var isHighScore = false
 
     init {
         loadHighScores()
@@ -48,6 +49,7 @@ class GameViewModel(
         viewModelScope.launch {
             _gameState.value = GameState.Loading
             currentScore = 0
+            isHighScore = false
             try {
                 repository.getAllCars().collect { cars ->
                     if (cars.isEmpty()) {
@@ -87,39 +89,37 @@ class GameViewModel(
                 }
             }
         } else {
-            _gameState.value = GameState.GameOver(
-                finalScore = currentScore,
-                playerName = playerName
-            )
-            saveScore()
+            checkIfHighScore()
         }
     }
 
-    private fun saveScore() {
-        if (playerName.isNotBlank()) {
-            viewModelScope.launch {
-                try {
-                    repository.saveScore(
-                        PlayerScore(
-                            playerName = playerName,
-                            score = currentScore
-                        )
-                    )
-                    loadHighScores()
-                } catch (e: Exception) {
-                    _gameState.value = GameState.Error("Failed to save score: ${e.message}")
-                }
-            }
+    private fun checkIfHighScore() {
+        viewModelScope.launch {
+            val topScores = repository.getTopScores().first()
+            isHighScore = topScores.size < 10 || currentScore > topScores.lastOrNull()?.score ?: 0
+            
+            _gameState.value = GameState.EnterName(currentScore)
         }
     }
 
     fun setPlayerName(name: String) {
         playerName = name
-        updateGameState { currentState ->
-            when (currentState) {
-                is GameState.Playing -> currentState.copy(playerName = name)
-                is GameState.GameOver -> currentState.copy(playerName = name)
-                else -> currentState
+        viewModelScope.launch {
+            try {
+                repository.saveScore(
+                    PlayerScore(
+                        playerName = name,
+                        score = currentScore
+                    )
+                )
+                loadHighScores()
+                _gameState.value = GameState.GameOver(
+                    finalScore = currentScore,
+                    playerName = name,
+                    isHighScore = isHighScore
+                )
+            } catch (e: Exception) {
+                _gameState.value = GameState.Error("Failed to save score: ${e.message}")
             }
         }
     }

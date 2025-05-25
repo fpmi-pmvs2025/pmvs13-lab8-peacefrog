@@ -1,6 +1,8 @@
 package com.example.guess_the_car.ui.game
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,11 +13,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import android.util.Log
 import com.example.guess_the_car.data.model.Car
-import com.example.guess_the_car.ui.game.GameState
+import com.example.guess_the_car.data.model.PlayerScore
 
 @Composable
 fun GameScreen(
@@ -23,6 +23,7 @@ fun GameScreen(
     modifier: Modifier = Modifier
 ) {
     val gameState by viewModel.gameState.collectAsStateWithLifecycle()
+    var nameInput by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -57,29 +58,104 @@ fun GameScreen(
                     onOptionSelected = { viewModel.checkAnswer(it) }
                 )
             }
+            is GameState.EnterName -> {
+                val score = (gameState as GameState.EnterName).score
+                Text(
+                    text = "Game Over!",
+                    style = MaterialTheme.typography.headlineLarge
+                )
+                Text(
+                    text = "Your Score: $score",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Enter your name to save your score",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                OutlinedTextField(
+                    value = nameInput,
+                    onValueChange = { nameInput = it },
+                    label = { Text("Your Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Button(
+                    onClick = {
+                        if (nameInput.isNotBlank()) {
+                            viewModel.setPlayerName(nameInput)
+                            nameInput = "" // Clear the input after saving
+                        }
+                    },
+                    enabled = nameInput.isNotBlank()
+                ) {
+                    Text("Save Score")
+                }
+            }
             is GameState.GameOver -> {
                 val currentState = gameState as GameState.GameOver
                 Text(
-                    text = "Game Over! Final Score: ${currentState.finalScore}",
-                    style = MaterialTheme.typography.headlineMedium
+                    text = "Game Over!",
+                    style = MaterialTheme.typography.headlineLarge
                 )
+                Text(
+                    text = "Final Score: ${currentState.finalScore}",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = if (currentState.isHighScore) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                )
+                
                 if (currentState.highScores.isNotEmpty()) {
                     Text(
-                        text = "High Scores",
+                        text = "Leaderboard",
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(top = 16.dp)
                     )
-                    currentState.highScores.forEach { score ->
-                        Text(
-                            text = "${score.playerName}: ${score.score}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        items(currentState.highScores) { score ->
+                            LeaderboardItem(score)
+                        }
                     }
                 }
-                Button(onClick = { viewModel.startNewGame() }) {
+                
+                Button(
+                    onClick = { viewModel.startNewGame() },
+                    modifier = Modifier.padding(top = 16.dp)
+                ) {
                     Text("Play Again")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LeaderboardItem(score: PlayerScore) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = score.playerName,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = score.score.toString(),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
@@ -95,8 +171,6 @@ private fun GameContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Log.d("GameScreen", "Attempting to load image from URL: ${currentCar.imageUrl}")
-        
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(currentCar.imageUrl)
@@ -106,15 +180,7 @@ private fun GameContent(
             modifier = Modifier
                 .size(200.dp)
                 .padding(16.dp),
-            contentScale = ContentScale.Fit,
-            onError = { 
-                Log.e("GameScreen", "Error loading image: ${it.result.throwable}")
-                Log.e("GameScreen", "Error details: ${it.result.throwable.message}")
-                Log.e("GameScreen", "Error cause: ${it.result.throwable.cause}")
-            },
-            onSuccess = { 
-                Log.d("GameScreen", "Successfully loaded image")
-            }
+            contentScale = ContentScale.Fit
         )
         
         Text(
