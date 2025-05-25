@@ -6,10 +6,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
+import android.util.Log
 import com.example.guess_the_car.data.model.Car
 import com.example.guess_the_car.ui.game.GameState
 
@@ -91,13 +95,26 @@ private fun GameContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        Log.d("GameScreen", "Attempting to load image from URL: ${currentCar.imageUrl}")
+        
         AsyncImage(
-            model = currentCar.imageUrl,
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(currentCar.imageUrl)
+                .crossfade(true)
+                .build(),
             contentDescription = "Car logo for ${currentCar.brand}",
             modifier = Modifier
                 .size(200.dp)
                 .padding(16.dp),
-            contentScale = ContentScale.Fit
+            contentScale = ContentScale.Fit,
+            onError = { 
+                Log.e("GameScreen", "Error loading image: ${it.result.throwable}")
+                Log.e("GameScreen", "Error details: ${it.result.throwable.message}")
+                Log.e("GameScreen", "Error cause: ${it.result.throwable.cause}")
+            },
+            onSuccess = { 
+                Log.d("GameScreen", "Successfully loaded image")
+            }
         )
         
         Text(

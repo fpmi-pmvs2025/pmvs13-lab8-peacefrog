@@ -1,6 +1,7 @@
 package com.example.guess_the_car.data.repository
 
 import android.content.Context
+import android.util.Log
 import com.example.guess_the_car.data.local.CarDao
 import com.example.guess_the_car.data.model.Car
 import com.example.guess_the_car.data.model.PlayerScore
@@ -16,19 +17,19 @@ class CarRepository(
     private val apiService: CarApiService
 ) {
     fun getAllCars(): Flow<List<Car>> = flow {
-        // First try to get cars from the database
-        val localCars = carDao.getAllCars().first()
-        if (localCars.isNotEmpty()) {
-            emit(localCars)
-        } else {
-            // If no cars in database, fetch from API
-            try {
-                val cars = apiService.getCars().map { it.toCar() }
-                carDao.insertCars(cars)
-                emit(cars)
-            } catch (e: Exception) {
-                throw e
+        // Clear existing data and fetch from API
+        try {
+            carDao.deleteAllCars()
+            val cars = apiService.getCars().map { 
+                val car = it.toCar()
+                Log.d("CarRepository", "API car URL before saving: ${car.imageUrl}")
+                car
             }
+            carDao.insertCars(cars)
+            emit(cars)
+        } catch (e: Exception) {
+            Log.e("CarRepository", "Error fetching cars: ${e.message}")
+            throw e
         }
     }
 
