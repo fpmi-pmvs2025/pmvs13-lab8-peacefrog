@@ -3,24 +3,6 @@
 ## Description
 Guess the Car Brand is an engaging Android game that tests players' knowledge of car brands through their logos. The game presents players with car logos and challenges them to identify the correct brand from multiple choices. Built with modern Android development practices, it features a clean architecture, local score tracking, and an intuitive user interface. The application uses Room database for data persistence and Jetpack Compose for a modern, responsive UI.
 
-## Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/guess-the-car.git
-   ```
-
-2. Dataset Preparation:
-   - Download the car logo dataset from Kaggle
-   - Create a `data` directory in the project root
-   - Extract the dataset to `data/Car_Logo_Dataset`
-   - Run the Python script to generate the JSON file:
-     ```bash
-     python generate_cars_json.py
-     ```
-
-3. Open the project in Android Studio
-4. Sync the project with Gradle files
-5. Build and run the application
 
 ## Usage
 1. Launch the application
