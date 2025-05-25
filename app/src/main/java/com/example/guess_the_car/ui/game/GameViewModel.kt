@@ -1,38 +1,25 @@
 package com.example.guess_the_car.ui.game
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.guess_the_car.data.Car
-import com.example.guess_the_car.data.CarRepository
-import com.example.guess_the_car.data.PlayerScore
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import com.example.guess_the_car.data.model.Car
+import com.example.guess_the_car.data.model.PlayerScore
+import com.example.guess_the_car.data.repository.CarRepository
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-data class GameState(
-    val currentCar: Car? = null,
-    val score: Int = 0,
-    val attempts: Int = 0,
-    val maxAttempts: Int = 3,
-    val isGameOver: Boolean = false,
-    val message: String = "",
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val playerName: String = "",
-    val highScores: List<PlayerScore> = emptyList()
-)
-
-@HiltViewModel
-class GameViewModel @Inject constructor(
+class GameViewModel(
     private val repository: CarRepository
 ) : ViewModel() {
 
-    private val _gameState = MutableStateFlow(GameState())
+    private val _gameState = MutableStateFlow<GameState>(GameState.Loading)
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
+
+    private var currentCar: Car? = null
+    private var options: List<String> = emptyList()
+    private var currentScore = 0
+    private var playerName = ""
 
     init {
         loadHighScores()
@@ -42,104 +29,130 @@ class GameViewModel @Inject constructor(
     private fun loadHighScores() {
         viewModelScope.launch {
             try {
-                val scores = repository.getTopScores()
-                _gameState.update { it.copy(highScores = scores) }
+                repository.getTopScores().collect { scores ->
+                    updateGameState { currentState ->
+                        when (currentState) {
+                            is GameState.Playing -> currentState.copy(highScores = scores)
+                            is GameState.GameOver -> currentState.copy(highScores = scores)
+                            else -> currentState
+                        }
+                    }
+                }
             } catch (e: Exception) {
-                _gameState.update { it.copy(error = "Failed to load high scores: ${e.message}") }
+                _gameState.value = GameState.Error("Failed to load high scores: ${e.message}")
             }
         }
     }
 
     fun startNewGame() {
         viewModelScope.launch {
+            _gameState.value = GameState.Loading
+            currentScore = 0
             try {
-                _gameState.update { it.copy(isLoading = true) }
-                val car = repository.getRandomCar()
-                _gameState.update {
-                    it.copy(
-                        currentCar = car,
-                        score = 0,
-                        attempts = 0,
-                        isGameOver = false,
-                        message = "Guess the car brand!",
-                        isLoading = false,
-                        error = null
-                    )
+                repository.getAllCars().collect { cars ->
+                    if (cars.isEmpty()) {
+                        _gameState.value = GameState.Error("No cars available")
+                        return@collect
+                    }
+                    selectNewCar(cars)
                 }
             } catch (e: Exception) {
-                _gameState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "Failed to start game: ${e.message}"
-                    )
-                }
+                _gameState.value = GameState.Error(e.message ?: "Unknown error occurred")
             }
         }
     }
 
-    fun checkGuess(guess: String) {
-        val currentState = _gameState.value
-        val currentCar = currentState.currentCar ?: return
-
-        val isCorrect = guess.equals(currentCar.brand, ignoreCase = true)
-        val newAttempts = currentState.attempts + 1
-        val newScore = if (isCorrect) currentState.score + 10 else currentState.score
-        val isGameOver = newAttempts >= currentState.maxAttempts
-
-        _gameState.update {
-            it.copy(
-                attempts = newAttempts,
-                score = newScore,
-                isGameOver = isGameOver,
-                message = if (isCorrect) "Correct! +10 points" else "Wrong! Try again"
-            )
+    private fun selectNewCar(cars: List<Car>) {
+        currentCar = cars.random()
+        options = cars.map { it.brand }.distinct().shuffled().take(4)
+        if (currentCar?.brand !in options) {
+            options = options.dropLast(1) + (currentCar?.brand ?: "")
         }
+        options = options.shuffled()
+        _gameState.value = GameState.Playing(
+            currentCar = currentCar!!,
+            options = options,
+            score = currentScore,
+            playerName = playerName
+        )
+    }
 
-        if (isGameOver) {
+    fun checkAnswer(selectedBrand: String) {
+        val car = currentCar ?: return
+        if (selectedBrand == car.brand) {
+            currentScore++
+            viewModelScope.launch {
+                repository.getAllCars().collect { cars ->
+                    selectNewCar(cars)
+                }
+            }
+        } else {
+            _gameState.value = GameState.GameOver(
+                finalScore = currentScore,
+                playerName = playerName
+            )
             saveScore()
         }
     }
 
     private fun saveScore() {
-        val currentState = _gameState.value
-        if (currentState.playerName.isNotBlank()) {
+        if (playerName.isNotBlank()) {
             viewModelScope.launch {
                 try {
-                    repository.insertScore(
+                    repository.saveScore(
                         PlayerScore(
-                            playerName = currentState.playerName,
-                            score = currentState.score
+                            playerName = playerName,
+                            score = currentScore
                         )
                     )
                     loadHighScores()
                 } catch (e: Exception) {
-                    _gameState.update { it.copy(error = "Failed to save score: ${e.message}") }
+                    _gameState.value = GameState.Error("Failed to save score: ${e.message}")
                 }
             }
         }
     }
 
     fun setPlayerName(name: String) {
-        _gameState.update { it.copy(playerName = name) }
+        playerName = name
+        updateGameState { currentState ->
+            when (currentState) {
+                is GameState.Playing -> currentState.copy(playerName = name)
+                is GameState.GameOver -> currentState.copy(playerName = name)
+                else -> currentState
+            }
+        }
     }
 
     fun skipCurrentCar() {
         viewModelScope.launch {
             try {
-                val newCar = repository.getRandomCar()
-                _gameState.update {
-                    it.copy(
-                        currentCar = newCar,
-                        message = "Skipped! New car loaded"
-                    )
+                repository.getAllCars().collect { cars ->
+                    if (cars.isNotEmpty()) {
+                        selectNewCar(cars)
+                    }
                 }
             } catch (e: Exception) {
-                _gameState.update { it.copy(error = "Failed to load new car: ${e.message}") }
+                _gameState.value = GameState.Error("Failed to load new car: ${e.message}")
             }
         }
     }
 
+    private fun updateGameState(update: (GameState) -> GameState) {
+        _gameState.value = update(_gameState.value)
+    }
+
     fun clearError() {
-        _gameState.update { it.copy(error = null) }
+        _gameState.value = GameState.Loading
+    }
+
+    class Factory(private val repository: CarRepository) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(GameViewModel::class.java)) {
+                return GameViewModel(repository) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
+        }
     }
 } 
