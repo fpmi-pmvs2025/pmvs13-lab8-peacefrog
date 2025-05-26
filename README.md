@@ -19,8 +19,8 @@ Guess the Car Brand is an engaging Android game that tests players' knowledge of
 
 ## Contributing
 ### Team Members
-- TToH4uk - Project Lead, Architecture Design, Backend Development
-- mbugzy - UI/UX Development, Testing and Quality Assurance
+- TToH4uk - Project Lead, Architecture Design, Testing and Quality Assurance
+- mbugzy - UI/UX Development, Backend Development
 
 ### Implemented Tasks
 - TToH4uk:
