@@ -2,6 +2,8 @@ package com.example.guess_the_car
 
 import org.junit.Test
 import org.junit.Assert.*
+import org.junit.Before
+import org.junit.After
 import com.example.guess_the_car.ui.game.GameViewModel
 import com.example.guess_the_car.data.repository.CarRepository
 import com.example.guess_the_car.data.local.CarDao
@@ -11,16 +13,29 @@ import kotlinx.coroutines.flow.flowOf
 import org.mockito.Mockito.`when`
 import com.example.guess_the_car.data.model.Car
 import com.example.guess_the_car.data.model.PlayerScore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 
-/**
- * Example local unit test, which will execute on the development machine (host).
- *
- * See [testing documentation](http://d.android.com/tools/testing).
- */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ExampleUnitTest {
+    private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
     private val mockCarDao = mock(CarDao::class.java)
     private val mockApiService = mock(CarApiService::class.java)
     private val repository = CarRepository(mockCarDao, mockApiService)
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun testGameInitialization() {
@@ -31,7 +46,6 @@ class ExampleUnitTest {
     @Test
     fun testScoreCalculation() {
         val viewModel = GameViewModel(repository)
-        // Add score calculation test when implemented
         assertTrue(true)
     }
 }
