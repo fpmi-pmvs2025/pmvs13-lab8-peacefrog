@@ -1,8 +1,9 @@
 package com.example.guess_the_car
 
 import org.junit.Test
-
 import org.junit.Assert.*
+import com.example.guess_the_car.ui.game.GameViewModel
+import com.example.guess_the_car.data.repository.CarRepository
 
 /**
  * Example local unit test, which will execute on the development machine (host).
@@ -11,7 +12,15 @@ import org.junit.Assert.*
  */
 class ExampleUnitTest {
     @Test
-    fun addition_isCorrect() {
-        assertEquals(4, 2 + 2)
+    fun testGameInitialization() {
+        val viewModel = GameViewModel(CarRepository(null, null))
+        assertNotNull(viewModel)
+    }
+
+    @Test
+    fun testScoreCalculation() {
+        val viewModel = GameViewModel(CarRepository(null, null))
+        // Add score calculation test when implemented
+        assertTrue(true)
     }
 }
